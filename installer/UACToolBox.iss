@@ -33,8 +33,8 @@ Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.i
 [Tasks]
 Name: "reg_task"; Description: "注册计划任务（免 UAC 启动核心，必选）"; GroupDescription: "系统注册："
 Name: "reg_env"; Description: "设置启动器环境变量 %XianTrace_UAC_ToolBox%（必选）"; GroupDescription: "系统注册："
-Name: "reg_menus"; Description: "注册资源管理器右键菜单（可选）"; GroupDescription: "系统注册："
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "reg_menus"; Description: "注册资源管理器右键菜单（可选）"; GroupDescription: "系统注册："; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 Source: "..\artifacts\win-x64\Config.exe"; DestDir: "{app}"; Flags: ignoreversion

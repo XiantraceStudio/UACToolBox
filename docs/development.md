@@ -156,3 +156,7 @@ assets/app.ico 由 scripts/make-icon.ps1 生成（8 尺寸 PNG ICO，深灰圆�
 ## 注册交互细化
 
 设置页“一键注册”与“刷新状态”按钮改为同一基线居中（修复刷新按钮上边距导致的错位）；任务、环境变量、右键菜单三项全部就绪时“一键注册”禁用（配置文件不计入注册项）。安装向导“附加任务”页提供三项独立勾选：计划任务与环境变量必选（NextButtonClick 校验不可取消），右键菜单可选；[Run] 按勾选分别执行 install / environment-add / menus-add。卸载仍全量移除三项。53 项检查通过，Setup 重新编译。
+
+## v1.0.0 发行
+
+安装向导默认勾选调整为：桌面快捷方式默认勾选，右键菜单默认不勾（任务与环境变量仍必选）。新增 scripts/release.ps1：校验工作区干净与 53 项集成检查后重新发布并编译 Setup，打 v 版本标签推送，gh release create 附带 UACToolBox-Setup.exe（说明文件以无 BOM UTF-8 写出，避免 PowerShell 5.1 ANSI 编码问题）。
