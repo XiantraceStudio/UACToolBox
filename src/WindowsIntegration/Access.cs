@@ -45,6 +45,33 @@ public static class Access
         ValidateLocalTargetPath(exe, false);
         ValidateLocalTargetPath(working, true);
     }
+    /// <summary>
+    /// 将目录或文件加固为受保护位置：所有者改为管理员、切断 ACL 继承、
+    /// 仅 SYSTEM 与管理员完全控制、普通用户只读。需要管理员权限。
+    /// 只处理传入的路径本身（及其直接内容），不改动其父目录链。
+    /// </summary>
+    public static void HardenPath(string path, bool directory)
+    {
+        RequireAdmin();
+        path = Path.GetFullPath(path);
+        FileSystemSecurity acl = directory ? new DirectorySecurity() : new FileSecurity();
+        ApplyProtectedAcl(acl);
+        if (directory)
+        {
+            new DirectoryInfo(path).SetAccessControl((DirectorySecurity)acl);
+            foreach (var child in Directory.EnumerateDirectories(path)) HardenPath(child, true);
+            foreach (var file in Directory.EnumerateFiles(path)) HardenPath(file, false);
+        }
+        else new FileInfo(path).SetAccessControl((FileSecurity)acl);
+    }
+    static void ApplyProtectedAcl(FileSystemSecurity acl)
+    {
+        acl.SetAccessRuleProtection(true, false);
+        acl.SetOwner(new SecurityIdentifier("S-1-5-32-544"));
+        foreach (var sid in new[] { "S-1-5-18", "S-1-5-32-544" })
+            acl.AddAccessRule(new(new SecurityIdentifier(sid), FileSystemRights.FullControl, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+        acl.AddAccessRule(new(new SecurityIdentifier("S-1-5-32-545"), FileSystemRights.ReadAndExecute, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+    }
     static void ValidateLocalTargetPath(string path, bool directory)
     {
         if (!Path.IsPathFullyQualified(path)) throw new InvalidDataException("目标和工作目录必须使用绝对路径。");

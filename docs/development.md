@@ -164,3 +164,6 @@ assets/app.ico 由 scripts/make-icon.ps1 生成（8 尺寸 PNG ICO，深灰圆�
 ## v1.0.0 发行修正
 
 首次 v1.0.0 发行的安装包误为自包含版本（67 MB）：release.ps1 中 -FrameworkDepended 拼写笔误在 PowerShell 下不报错且不绑定开关，publish.ps1 走入 self-contained 分支。已修正为 -FrameworkDependent:$true；publish.ps1 重写为数组展开调用 dotnet（弃用 Start-Process 引号拼接），打印完整命令与产物大小，并在框架依赖模式下以 20 MB 上限护栏拦截自包含产物。正确 3.8 MB 安装包已覆盖上传至 v1.0.0 Release。经验：PowerShell 未匹配的开关参数名静默不绑定，脚本参数需与目标精确一致。
+
+## 安装位置自动加固与遗留代码清除
+
