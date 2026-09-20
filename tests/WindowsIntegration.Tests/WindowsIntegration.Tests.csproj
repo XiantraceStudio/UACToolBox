@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><OutputType>Exe</OutputType><UseWPF>true</UseWPF></PropertyGroup>
+ <ItemGroup><ProjectReference Include="../../src/WindowsIntegration/WindowsIntegration.csproj"/><ProjectReference Include="../../src/Config/Config.csproj"/></ItemGroup>
+</Project>

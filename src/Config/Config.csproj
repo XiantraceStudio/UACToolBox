@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>WinExe</OutputType><UseWPF>true</UseWPF><ApplicationManifest>app.manifest</ApplicationManifest><ApplicationIcon>..\..\assets\app.ico</ApplicationIcon></PropertyGroup><ItemGroup><ProjectReference Include="../WindowsIntegration/WindowsIntegration.csproj" /></ItemGroup><ItemGroup>
+  <PackageReference Include="WPF-UI" Version="4.3.0" />
+</ItemGroup></Project>
