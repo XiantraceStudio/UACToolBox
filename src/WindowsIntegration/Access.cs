@@ -75,37 +75,6 @@ public static class Access
         acl.AddAccessRule(new(new SecurityIdentifier("S-1-5-32-545"), FileSystemRights.ReadAndExecute, inheritance, PropagationFlags.None, AccessControlType.Allow));
         return acl;
     }
-    /// <summary>
-    /// 收紧指定目录的全部父目录（含盘根）：所有者不为受信任主体时改为管理员；
-    /// 对文件夹本身生效的普通用户授权移除删除 / 改写 ACL 等危险权限。
-    /// 可继承到其他子目录与既有内容的授权保持不变——除文件夹本身的改名 / 删除需提权外，
-    /// 盘上其他内容行为不变。需要管理员权限。
-    /// </summary>
-    public static void HardenAncestors(string directoryPath)
-    {
-        RequireAdmin();
-        for (var directory = new DirectoryInfo(Path.GetFullPath(directoryPath)).Parent; directory is not null; directory = directory.Parent)
-            TrimDangerousRights(directory);
-    }
-    static void TrimDangerousRights(DirectoryInfo directory)
-    {
-        DirectorySecurity acl = directory.GetAccessControl();
-        // 断开继承并复制现有规则，使修改作用于本文件夹的显式副本；可继承规则原样保留。
-        acl.SetAccessRuleProtection(true, true);
-        if (acl.GetOwner(typeof(SecurityIdentifier)) is SecurityIdentifier owner && !Trusted(owner))
-            acl.SetOwner(new SecurityIdentifier("S-1-5-32-544"));
-        foreach (FileSystemAccessRule rule in acl.GetAccessRules(true, true, typeof(SecurityIdentifier)))
-        {
-            if (rule.AccessControlType != AccessControlType.Allow || (rule.PropagationFlags & PropagationFlags.InheritOnly) != 0 || Trusted((SecurityIdentifier)rule.IdentityReference)) continue;
-            var dangerous = FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership | FileSystemRights.Delete | FileSystemRights.DeleteSubdirectoriesAndFiles;
-            if ((rule.FileSystemRights & dangerous) == 0) continue;
-            acl.RemoveAccessRuleSpecific(rule);
-            var reduced = rule.FileSystemRights & ~dangerous;
-            if (reduced != 0)
-                acl.AddAccessRule(new FileSystemAccessRule(rule.IdentityReference, reduced, rule.InheritanceFlags, rule.PropagationFlags, AccessControlType.Allow));
-        }
-        directory.SetAccessControl(acl);
-    }
     static void ValidateLocalTargetPath(string path, bool directory)
     {
         if (!Path.IsPathFullyQualified(path)) throw new InvalidDataException("目标和工作目录必须使用绝对路径。");

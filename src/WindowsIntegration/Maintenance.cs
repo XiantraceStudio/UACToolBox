@@ -20,9 +20,9 @@ public static class Maintenance
         }
     }
     /// <summary>
-    /// 校验安装位置是否受保护；不达标时先自动加固：安装目录本身完全加固（所有者改管理员、
-    /// 切断继承、普通用户只读），父目录链（含盘根）仅移除对文件夹本身生效的危险权限、
-    /// 修正所有者——可继承授权保持不变，盘上其他内容行为不受影响。仍不达标时抛出的异常指出确切路径。
+    /// 校验安装位置是否受保护；若安装目录本身不达标，先自动加固该目录（所有者改管理员、
+    /// 切断继承、普通用户只读）再复核。父目录链仍不达标时抛出的异常会指出确切路径——
+    /// 链上任一普通用户可删除/改名的层级都能通过“改名替换”劫持提权执行端，不做静默放宽。
     /// </summary>
     static void EnsureProtectedInstall()
     {
@@ -30,7 +30,6 @@ public static class Maintenance
         catch (UnauthorizedAccessException)
         {
             Access.HardenPath(AppContext.BaseDirectory, true);
-            Access.HardenAncestors(AppContext.BaseDirectory);
             Access.ProtectedPath(Store.LauncherPath);
             Access.ProtectedPath(AppContext.BaseDirectory, true);
         }

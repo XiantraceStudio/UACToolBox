@@ -176,7 +176,3 @@ assets/app.ico 由 scripts/make-icon.ps1 生成（8 尺寸 PNG ICO，深灰圆�
 ## 加固文件 ACL 修复与历史文本清除
 
 修复 HardenPath 对文件应用继承标志导致的 "No flags can be set. (Parameter 'inheritanceFlags')"：文件 ACL 仅允许 InheritanceFlags.None，目录才可携带 ContainerInherit/ObjectInherit；BuildProtectedAcl 公开构造逻辑并新增回归检查。文档中遗留实现相关字样全部移除，并从版本历史中清除相应文本。
-
-## 父目录链自动收紧
-
-自定义安装位置的自动加固扩展到父目录链（含盘根）：Access.HardenAncestors 对每个父目录断开继承并复制规则后，仅从"对本文件夹生效"的普通用户 Allow 规则中移除删除/改写 ACL 等危险权限，并把非受信任所有者改为管理员；可继承规则原样保留，因此盘上其他子目录与既有内容的授权不变，唯一变化是链上文件夹本身的改名/删除此后需要提权（这正是阻断改名替换劫持所需，也封堵了所有者隐含的 WRITE_DAC）。数据盘默认授权（根目录 Authenticated Users Modify）经此处理后即可通过 ProtectedPath 全链校验。
