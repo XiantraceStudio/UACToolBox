@@ -54,8 +54,7 @@ public static class Access
     {
         RequireAdmin();
         path = Path.GetFullPath(path);
-        FileSystemSecurity acl = directory ? new DirectorySecurity() : new FileSecurity();
-        ApplyProtectedAcl(acl);
+        FileSystemSecurity acl = BuildProtectedAcl(directory);
         if (directory)
         {
             new DirectoryInfo(path).SetAccessControl((DirectorySecurity)acl);
@@ -64,13 +63,17 @@ public static class Access
         }
         else new FileInfo(path).SetAccessControl((FileSecurity)acl);
     }
-    static void ApplyProtectedAcl(FileSystemSecurity acl)
+    /// <summary>构造受保护位置的 ACL 模板；文件不允许携带继承标志，仅目录可继承到内容。</summary>
+    public static FileSystemSecurity BuildProtectedAcl(bool directory)
     {
+        FileSystemSecurity acl = directory ? new DirectorySecurity() : new FileSecurity();
         acl.SetAccessRuleProtection(true, false);
         acl.SetOwner(new SecurityIdentifier("S-1-5-32-544"));
+        InheritanceFlags inheritance = directory ? InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit : InheritanceFlags.None;
         foreach (var sid in new[] { "S-1-5-18", "S-1-5-32-544" })
-            acl.AddAccessRule(new(new SecurityIdentifier(sid), FileSystemRights.FullControl, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
-        acl.AddAccessRule(new(new SecurityIdentifier("S-1-5-32-545"), FileSystemRights.ReadAndExecute, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+            acl.AddAccessRule(new(new SecurityIdentifier(sid), FileSystemRights.FullControl, inheritance, PropagationFlags.None, AccessControlType.Allow));
+        acl.AddAccessRule(new(new SecurityIdentifier("S-1-5-32-545"), FileSystemRights.ReadAndExecute, inheritance, PropagationFlags.None, AccessControlType.Allow));
+        return acl;
     }
     static void ValidateLocalTargetPath(string path, bool directory)
     {

@@ -83,6 +83,8 @@ internal static class Program
             TestConfigurationCaller().GetAwaiter().GetResult();
             Check(Maintenance.IsSupported("register") && Maintenance.IsSupported("install") && Maintenance.IsSupported("menus-remove") && !Maintenance.IsSupported("save") && !Maintenance.IsSupported("cmd.exe"), "Maintenance accepts only fixed system operations");
             Check(Store.Root.EndsWith(Path.Combine("XianTrace", "UACToolBox"), StringComparison.OrdinalIgnoreCase) && !Store.Root.Contains("LaunchManager"), "Config directory is XianTrace/UACToolBox without legacy fallback");
+            Check(Access.BuildProtectedAcl(false) is System.Security.AccessControl.FileSecurity && Access.BuildProtectedAcl(true) is System.Security.AccessControl.DirectorySecurity,
+                "Protected ACL templates build for files and directories without inheritance on files");
             Check(Scheduler.Inspect().Message.Length > 0, "Read actual task status without modifying tasks");
             var app = new System.Windows.Application();
             app.Resources = new System.Windows.ResourceDictionary { Source = new Uri("/Config;component/Theme.xaml", UriKind.Relative) };

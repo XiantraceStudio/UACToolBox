@@ -167,7 +167,12 @@ assets/app.ico 由 scripts/make-icon.ps1 生成（8 尺寸 PNG ICO，深灰圆�
 
 ## 安装位置自动加固与遗留代码清除
 
+自定义安装目录（如数据盘路径）注册失败时，Maintenance 现会先自动加固安装目录本身（Access.HardenPath：所有者改为管理员、切断 ACL 继承、SYSTEM/管理员完全控制、普通用户只读，递归作用于目录内容）再复核；父目录链仍不达标时异常指明确切路径，不做静默放宽——链上任一普通用户可删除/改名的层级（数据盘根目录默认授权 Authenticated Users Modify 即如此）都能通过改名替换劫持提权执行端。安装向导选择非 Program Files 目录时给出提示。旧版遗留源文件删除并从版本历史彻底清除。README 重写。53 项检查通过。
 
 ## 双发行版本
 
 发布链路改为同时产出框架依赖与自包含两种安装包：publish.ps1 依次发布 artifacts\win-x64（框架依赖，保留 20 MB 护栏）与 artifacts\win-x64-selfcontained（自包含，Config 约 140 MB / Launcher 约 70 MB）；UACToolBox.iss 增加 PayloadDir / OutputName 定义，build-setup.ps1 以 -Variant 控制编译 UACToolBox-Setup.exe（约 3.6 MB）与 UACToolBox-Setup-SelfContained.exe（约 66.7 MB）；release.ps1 同时挂两个安装包，发行说明与 README 同步说明两种版本。两版 AppId 相同，互为升级替换。
+
+## 加固文件 ACL 修复与历史文本清除
+
+修复 HardenPath 对文件应用继承标志导致的 "No flags can be set. (Parameter 'inheritanceFlags')"：文件 ACL 仅允许 InheritanceFlags.None，目录才可携带 ContainerInherit/ObjectInherit；BuildProtectedAcl 公开构造逻辑并新增回归检查。文档中遗留实现相关字样全部移除，并从版本历史中清除相应文本。
