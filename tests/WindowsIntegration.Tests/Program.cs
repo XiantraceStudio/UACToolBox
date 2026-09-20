@@ -83,6 +83,11 @@ internal static class Program
             TestConfigurationCaller().GetAwaiter().GetResult();
             Check(Maintenance.IsSupported("register") && Maintenance.IsSupported("install") && Maintenance.IsSupported("menus-remove") && !Maintenance.IsSupported("save") && !Maintenance.IsSupported("cmd.exe"), "Maintenance accepts only fixed system operations");
             Check(Store.Root.EndsWith(Path.Combine("XianTrace", "UACToolBox"), StringComparison.OrdinalIgnoreCase) && !Store.Root.Contains("LaunchManager"), "Config directory is XianTrace/UACToolBox without legacy fallback");
+            var (registeredPath, registeredHash) = Store.RegisteredConfigExe();
+            Check(Store.LauncherPath.StartsWith(Store.Root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+                Store.LauncherSource.StartsWith(AppContext.BaseDirectory, StringComparison.OrdinalIgnoreCase) &&
+                (registeredPath is null) == (registeredHash is null),
+                "Runtime broker lives in protected config root; registration path and hash are recorded together");
             Check(Access.BuildProtectedAcl(false) is System.Security.AccessControl.FileSecurity && Access.BuildProtectedAcl(true) is System.Security.AccessControl.DirectorySecurity,
                 "Protected ACL templates build for files and directories without inheritance on files");
             Check(Scheduler.Inspect().Message.Length > 0, "Read actual task status without modifying tasks");

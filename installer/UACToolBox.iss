@@ -62,11 +62,6 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
-  if CurPageID = wpSelectDir then
-  begin
-    if Pos(Lowercase(ExpandConstant('{autopf}')), Lowercase(WizardDirValue())) <> 1 then
-      MsgBox('所选目录不在受保护的 Program Files 下。安装时会自动加固该目录权限；若父目录链普通用户仍可删除或改名（如数据盘默认授权），注册仍会失败并指出具体路径，建议使用默认安装位置。', mbConfirmation, MB_OK);
-  end;
   if CurPageID = wpSelectTasks then
   begin
     if (not WizardIsTaskSelected('reg_task')) or (not WizardIsTaskSelected('reg_env')) then

@@ -7,8 +7,31 @@ public static class Store
 {
     public static string Root => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "XianTrace", "UACToolBox");
     public static string FilePath => Path.Combine(Root, Access.Sid + ".json");
-    public static string LauncherPath => Path.Combine(AppContext.BaseDirectory, "Launcher.exe");
+    /// <summary>运行时执行端固定部署在受保护的配置根目录，与安装位置无关。</summary>
+    public static string LauncherPath => Path.Combine(Root, "Launcher.exe");
+    /// <summary>安装目录中的执行端来源副本，注册时复制到 LauncherPath。</summary>
+    public static string LauncherSource => Path.Combine(AppContext.BaseDirectory, "Launcher.exe");
     public static string Variable => "XianTrace_UAC_ToolBox";
+    const string RegistrationKeyName = @"SOFTWARE\XianTrace\UACToolBox";
+    /// <summary>注册时记录的配置界面路径与 SHA-256（仅管理员可写），供执行端核验保存请求调用方。</summary>
+    public static (string? Path, string? Hash) RegisteredConfigExe()
+    {
+        using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(RegistrationKeyName);
+        return ((string?)key?.GetValue("ConfigPath"), (string?)key?.GetValue("ConfigHash"));
+    }
+    public static void RecordConfigExe(string path)
+    {
+        Access.RequireAdmin();
+        using var key = Microsoft.Win32.Registry.LocalMachine.CreateSubKey(RegistrationKeyName);
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        key.SetValue("ConfigPath", Path.GetFullPath(path));
+        key.SetValue("ConfigHash", Convert.ToHexString(sha.ComputeHash(File.ReadAllBytes(path))));
+    }
+    public static void ClearRegistration()
+    {
+        Access.RequireAdmin();
+        Microsoft.Win32.Registry.LocalMachine.DeleteSubKey(RegistrationKeyName, false);
+    }
     public static void Ensure()
     {
         Access.RequireAdmin();

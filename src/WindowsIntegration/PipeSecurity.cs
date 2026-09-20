@@ -44,12 +44,14 @@ public static class PipeSecurity
         if (!GetNamedPipeClientProcessId(pipe.SafePipeHandle, out uint pid)) throw new Win32Exception();
         using var process = OpenProcess(0x1000, false, pid);
         var path = new StringBuilder(32768); uint length = (uint)path.Capacity;
-        string expected = Path.Combine(AppContext.BaseDirectory, "Config.exe");
-        if (process.IsInvalid || !QueryFullProcessImageName(process, 0, path, ref length) ||
-            !string.Equals(Path.GetFullPath(path.ToString()), expected, StringComparison.OrdinalIgnoreCase))
+        var (expected, hash) = Store.RegisteredConfigExe();
+        if (process.IsInvalid || expected is null || hash is null || !QueryFullProcessImageName(process, 0, path, ref length) ||
+            !string.Equals(Path.GetFullPath(path.ToString()), Path.GetFullPath(expected), StringComparison.OrdinalIgnoreCase))
             throw new UnauthorizedAccessException("仅接受本安装的配置界面提交保存。");
-        Access.ProtectedPath(expected);
-        Access.ProtectedPath(AppContext.BaseDirectory, true);
+        // 调用方镜像须与注册时记录的哈希一致；界面文件被替换（安装目录用户可写）即拒绝。
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        if (!string.Equals(Convert.ToHexString(sha.ComputeHash(File.ReadAllBytes(path.ToString()))), hash, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("配置界面文件与注册时不一致，请修复安装。");
     }
     public static void VerifyServer(NamedPipeClientStream pipe)
     {

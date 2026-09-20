@@ -20,7 +20,7 @@ public static class Scheduler
         service.Connect(); return service;
     }
     static InstallationStatus InspectTask(dynamic task) => TaskPolicy.Inspect((string)task.Xml,
-        (string)task.GetSecurityDescriptor(7), Access.Sid, Store.LauncherPath, AppContext.BaseDirectory);
+        (string)task.GetSecurityDescriptor(7), Access.Sid, Store.LauncherPath, Store.Root);
     public static InstallationStatus Inspect()
     {
         using var scope = new ComScope();
@@ -32,8 +32,18 @@ public static class Scheduler
     public static bool Installed() => Inspect().State == InstallationState.Ready;
     public static void Install()
     {
-        Access.RequireAdmin(); Access.ProtectedPath(Store.LauncherPath);
-        Access.ProtectedPath(AppContext.BaseDirectory, true); Store.Ensure();
+        Access.RequireAdmin(); Store.Ensure();
+        // 执行端部署到受保护的配置根目录；安装目录本身不再要求受保护。
+        string staged = Path.Combine(Store.Root, Guid.NewGuid() + ".tmp");
+        try
+        {
+            File.Copy(Store.LauncherSource, staged, true);
+            File.Move(staged, Store.LauncherPath, true);
+        }
+        finally { if (File.Exists(staged)) File.Delete(staged); }
+        Access.ProtectedPath(Store.LauncherPath); Access.ProtectedPath(Store.Root, true);
+        // 记录配置界面位置与哈希，作为保存请求的调用方核验锚点。
+        Store.RecordConfigExe(Environment.ProcessPath!);
         using var scope = new ComScope();
         dynamic service = Connect(scope); dynamic root = scope.Track(service.GetFolder(@"\"));
         string? oldXml = null, oldSecurity = null;
@@ -53,7 +63,7 @@ public static class Scheduler
         settings.StopIfGoingOnBatteries = false; settings.ExecutionTimeLimit = "PT0S";
         settings.AllowDemandStart = true; settings.Enabled = true;
         dynamic actions = scope.Track(task.Actions); dynamic action = scope.Track(actions.Create(0));
-        action.Path = Store.LauncherPath; action.Arguments = "broker"; action.WorkingDirectory = AppContext.BaseDirectory;
+        action.Path = Store.LauncherPath; action.Arguments = "broker"; action.WorkingDirectory = Store.Root;
         string sddl = $"O:BAG:BAD:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGX;;;{Access.Sid})";
         bool registered = false;
         try

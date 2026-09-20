@@ -176,3 +176,7 @@ assets/app.ico 由 scripts/make-icon.ps1 生成（8 尺寸 PNG ICO，深灰圆�
 ## 加固文件 ACL 修复与历史文本清除
 
 修复 HardenPath 对文件应用继承标志导致的 "No flags can be set. (Parameter 'inheritanceFlags')"：文件 ACL 仅允许 InheritanceFlags.None，目录才可携带 ContainerInherit/ObjectInherit；BuildProtectedAcl 公开构造逻辑并新增回归检查。文档中遗留实现相关字样全部移除，并从版本历史中清除相应文本。
+
+## 运行端迁移：安装目录不再要求受保护
+
+按"不修改用户目录任何权限"的要求，撤销父目录链收紧方案，改为运行端迁移架构：提权执行端 Launcher.exe 在注册（Scheduler.Install）时从安装目录复制到受保护的配置根目录 ProgramData\XianTrace\UACToolBox 并经 ACL 校验；计划任务动作、工作目录、环境变量、右键菜单运行项与快捷方式全部指向该位置。Store.LauncherPath 语义改为运行端路径，新增 LauncherSource（安装目录来源副本）。保存配置的调用方核验（PipeSecurity.VerifyConfigurationClient）改为注册表 HKLM\SOFTWARE\XianTrace\UACToolBox 记录的配置界面路径 + SHA-256：安装目录因此可以任意选择（含用户可写位置），界面文件被替换即拒绝保存，提权边界不受影响；卸载时清除注册记录。安装向导取消自定义目录警告。
