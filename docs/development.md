@@ -167,3 +167,7 @@ assets/app.ico 由 scripts/make-icon.ps1 生成（8 尺寸 PNG ICO，深灰圆�
 
 ## 安装位置自动加固与遗留代码清除
 
+
+## 双发行版本
+
+发布链路改为同时产出框架依赖与自包含两种安装包：publish.ps1 依次发布 artifacts\win-x64（框架依赖，保留 20 MB 护栏）与 artifacts\win-x64-selfcontained（自包含，Config 约 140 MB / Launcher 约 70 MB）；UACToolBox.iss 增加 PayloadDir / OutputName 定义，build-setup.ps1 以 -Variant 控制编译 UACToolBox-Setup.exe（约 3.6 MB）与 UACToolBox-Setup-SelfContained.exe（约 66.7 MB）；release.ps1 同时挂两个安装包，发行说明与 README 同步说明两种版本。两版 AppId 相同，互为升级替换。

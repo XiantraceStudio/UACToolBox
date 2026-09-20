@@ -5,6 +5,13 @@
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "XianTrace Studio"
 #define MyAppExeName "Config.exe"
+; Overridden by scripts\build-setup.ps1 for the self-contained variant.
+#ifndef PayloadDir
+#define PayloadDir "..\artifacts\win-x64"
+#endif
+#ifndef OutputName
+#define OutputName "UACToolBox-Setup"
+#endif
 
 [Setup]
 AppId={{7C1D9C4A-5E2B-4A3F-8D6E-9F0B1C2D3E4A}
@@ -21,7 +28,7 @@ SetupIconFile=..\assets\app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 OutputDir=..\artifacts
-OutputBaseFilename=UACToolBox-Setup
+OutputBaseFilename={#OutputName}
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -37,8 +44,8 @@ Name: "reg_menus"; Description: "注册资源管理器右键菜单（可选）";
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "..\artifacts\win-x64\Config.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\artifacts\win-x64\Launcher.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadDir}\Config.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadDir}\Launcher.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

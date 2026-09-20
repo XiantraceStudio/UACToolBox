@@ -14,12 +14,13 @@ Windows 免 UAC 快捷方式启动与配置工具。
 
 ## 安装
 
-下载 [UACToolBox-Setup.exe](https://github.com/XiantraceStudio/UACToolBox/releases) 运行（Inno Setup 标准向导，简体中文）：
+下载 [Release](https://github.com/XiantraceStudio/UACToolBox/releases) 中的安装包运行（Inno Setup 标准向导，简体中文）：
 
-- 默认安装到 `C:\Program Files\XianTrace\UACToolBox`；配置文件位于 `C:\ProgramData\XianTrace\UACToolBox`。
+- **标准版 UACToolBox-Setup.exe**（约 4 MB）：需已安装 [.NET 10 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/10.0)。
+- **自包含版 UACToolBox-Setup-SelfContained.exe**：内含运行时，无需额外依赖，体积较大。
+- 两版安装相同应用，任选其一；默认安装到 `C:\Program Files\XianTrace\UACToolBox`，配置文件位于 `C:\ProgramData\XianTrace\UACToolBox`。
 - 安装时勾选：计划任务与环境变量（必选）、右键菜单（可选，默认不勾）、桌面快捷方式（可选，默认勾选）。
 - 在 Windows「应用和功能」中注册，卸载时一并移除注册项与配置。
-- 需已安装 [.NET 10 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/10.0)。
 
 > 自定义安装目录：安装位置必须整条父目录链都由管理员控制（如 Program Files）。安装时会自动加固所选目录本身的权限；若父目录链普通用户可删除或改名（数据盘默认授权即如此），注册会失败并指出具体路径。
 
