@@ -152,3 +152,7 @@ Windows 检查通过；额外支持 --render-ui <目录> 在独立预览窗口�
 自制控制台安装器移除，改用 Inno Setup 7 标准脚本（installer/UACToolBox.iss，简体中文向导）：默认安装到 Program Files\XianTrace\UACToolBox，[Tasks] 提供可选桌面快捷方式，开始菜单建组，写入标准“应用和功能”注册并由 unins000.exe 卸载；安装末尾以已提权身份运行 Config.exe --admin-operation-self register 完成计划任务、环境变量、右键菜单注册，卸载时依次执行 uninstall / environment-remove / menus-remove 并删除 {commonappdata}\XianTrace\UACToolBox。App.xaml.cs 新增 --admin-operation-self 形式（以自身账户为授权对象，供安装器调用）。
 
 assets/app.ico 由 scripts/make-icon.ps1 生成（8 尺寸 PNG ICO，深灰圆角方块 + U），经 csproj ApplicationIcon 嵌入 Config.exe 与 Launcher.exe，同时用作安装程序与快捷方式图标。scripts/build-setup.ps1 定位 ISCC.exe（优先 D:\Apps\Tools\Inno Setup 7）并编译 artifacts\UACToolBox-Setup.exe（约 3.7 MB）。.iss 含非 ASCII 内容需 UTF-8 BOM；PowerShell 5.1 无 BOM 脚本按 ANSI 解码，脚本文件保持纯 ASCII。本轮 53 项检查通过；安装包端到端安装/卸载待实测。
+
+## 注册交互细化
+
+设置页“一键注册”与“刷新状态”按钮改为同一基线居中（修复刷新按钮上边距导致的错位）；任务、环境变量、右键菜单三项全部就绪时“一键注册”禁用（配置文件不计入注册项）。安装向导“附加任务”页提供三项独立勾选：计划任务与环境变量必选（NextButtonClick 校验不可取消），右键菜单可选；[Run] 按勾选分别执行 install / environment-add / menus-add。卸载仍全量移除三项。53 项检查通过，Setup 重新编译。

@@ -59,8 +59,8 @@
    <TabItem x:Name="SettingsPage"><TabItem.Header><StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Settings24" Margin="0,0,12,0"/><TextBlock Text="设置"/></StackPanel></TabItem.Header><TabControl x:Name="SettingsTabs">
     <TabItem Header="系统"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="20">
      <DockPanel Margin="0,0,0,20">
-      <ui:Button DockPanel.Dock="Right" Style="{StaticResource ActionButton}" Margin="0" Content="一键注册" Appearance="Primary" Click="RegisterClick" VerticalAlignment="Center"/>
-      <ui:Button DockPanel.Dock="Right" Style="{StaticResource ActionButton}" Margin="0,12,12,0" Content="刷新状态" Click="RefreshClick" VerticalAlignment="Center"/>
+      <ui:Button x:Name="RegisterButton" DockPanel.Dock="Right" Style="{StaticResource ActionButton}" Margin="0" Content="一键注册" Appearance="Primary" Click="RegisterClick" VerticalAlignment="Center" ToolTip="全部组件就绪后无需注册。"/>
+      <ui:Button DockPanel.Dock="Right" Style="{StaticResource ActionButton}" Margin="0,0,12,0" Content="刷新状态" Click="RefreshClick" VerticalAlignment="Center"/>
       <TextBlock Text="系统组件" FontSize="28" FontWeight="SemiBold"/>
      </DockPanel>
      <Border Style="{StaticResource FormCard}" Padding="22,18"><Grid>

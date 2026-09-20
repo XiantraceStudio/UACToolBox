@@ -122,14 +122,17 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     }
     void RefreshStatus()
     {
-        try { var task = Scheduler.Inspect(); SetStatus(InstallDot, InstallStatus, task.Message, task.State == InstallationState.Ready); }
+        bool taskOk = false, environmentOk = false, menusOk = false;
+        try { var task = Scheduler.Inspect(); taskOk = task.State == InstallationState.Ready; SetStatus(InstallDot, InstallStatus, task.Message, taskOk); }
         catch (Exception ex) { SetStatus(InstallDot, InstallStatus, "检测失败：" + ex.Message, false); }
         try { bool saved = File.Exists(Store.FilePath); SetStatus(ConfigurationDot, ConfigurationStatus, (saved ? $"正常，{Store.Load().Entries.Count} 项" : "尚未保存") + "\n" + Store.FilePath, saved); }
         catch (Exception ex) { SetStatus(ConfigurationDot, ConfigurationStatus, "检测失败：" + ex.Message + "\n" + Store.FilePath, false); }
-        try { var environment = DesktopIntegration.InspectEnvironment(); SetStatus(EnvironmentDot, EnvironmentStatus, environment.Message, environment.Ready); }
+        try { var environment = DesktopIntegration.InspectEnvironment(); environmentOk = environment.Ready; SetStatus(EnvironmentDot, EnvironmentStatus, environment.Message, environmentOk); }
         catch (Exception ex) { SetStatus(EnvironmentDot, EnvironmentStatus, "检测失败：" + ex.Message, false); }
-        try { var menus = DesktopIntegration.InspectMenus(); SetStatus(MenusDot, MenusStatus, menus.Message, menus.Ready); }
+        try { var menus = DesktopIntegration.InspectMenus(); menusOk = menus.Ready; SetStatus(MenusDot, MenusStatus, menus.Message, menusOk); }
         catch (Exception ex) { SetStatus(MenusDot, MenusStatus, "检测失败：" + ex.Message, false); }
+        // 一键注册覆盖任务、环境变量、右键菜单；配置文件不属于注册项。
+        RegisterButton.IsEnabled = !(taskOk && environmentOk && menusOk);
     }
     static readonly System.Windows.Media.SolidColorBrush ReadyBrush = new(System.Windows.Media.Color.FromRgb(0x25, 0x80, 0x5D));
     static readonly System.Windows.Media.SolidColorBrush ProblemBrush = new(System.Windows.Media.Color.FromRgb(0xC4, 0x2B, 0x1C));
