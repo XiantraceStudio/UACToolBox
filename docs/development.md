@@ -160,3 +160,7 @@ assets/app.ico 由 scripts/make-icon.ps1 生成（8 尺寸 PNG ICO，深灰圆�
 ## v1.0.0 发行
 
 安装向导默认勾选调整为：桌面快捷方式默认勾选，右键菜单默认不勾（任务与环境变量仍必选）。新增 scripts/release.ps1：校验工作区干净与 53 项集成检查后重新发布并编译 Setup，打 v 版本标签推送，gh release create 附带 UACToolBox-Setup.exe（说明文件以无 BOM UTF-8 写出，避免 PowerShell 5.1 ANSI 编码问题）。
+
+## v1.0.0 发行修正
+
+首次 v1.0.0 发行的安装包误为自包含版本（67 MB）：release.ps1 中 -FrameworkDepended 拼写笔误在 PowerShell 下不报错且不绑定开关，publish.ps1 走入 self-contained 分支。已修正为 -FrameworkDependent:$true；publish.ps1 重写为数组展开调用 dotnet（弃用 Start-Process 引号拼接），打印完整命令与产物大小，并在框架依赖模式下以 20 MB 上限护栏拦截自包含产物。正确 3.8 MB 安装包已覆盖上传至 v1.0.0 Release。经验：PowerShell 未匹配的开关参数名静默不绑定，脚本参数需与目标精确一致。

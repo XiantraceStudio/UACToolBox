@@ -18,7 +18,7 @@ Write-Host 'Running integration checks...'
 if ($LASTEXITCODE -ne 0 -or -not (($testOutput | Select-Object -Last 1) -match '\d+ Windows checks passed')) { throw 'Integration checks failed.' }
 
 # 3. Fresh publish and setup package.
-& (Join-Path $PSScriptRoot 'publish.ps1') -FrameworkDepended
+& (Join-Path $PSScriptRoot 'publish.ps1') -FrameworkDependent:$true
 if ($LASTEXITCODE -ne 0) { throw 'publish.ps1 failed.' }
 & (Join-Path $PSScriptRoot 'build-setup.ps1')
 if ($LASTEXITCODE -ne 0) { throw 'build-setup.ps1 failed.' }
