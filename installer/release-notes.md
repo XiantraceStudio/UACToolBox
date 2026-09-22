@@ -15,5 +15,6 @@ UACToolBox {TAG}
 - 资源管理器右键菜单：通过 UACToolBox 运行 / 添加到 UACToolBox
 - 首次启动引导与系统页一键注册；组件状态以红绿圆点展示
 - 在 Windows“应用和功能”中注册并完整卸载
+- 多语言：内置简体中文与 English，设置页实时切换；languages 目录放入 语言代码.json 即可追加语言
 
 本版本为开发预览性质。
