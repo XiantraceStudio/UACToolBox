@@ -10,6 +10,7 @@ Windows 免 UAC 快捷方式启动与配置工具。
 - **免 UAC 启动**：快捷方式指向 `%XianTrace_UAC_ToolBox%` 环境变量解析的启动器，由计划任务以授权身份启动目标程序。
 - **右键菜单**：资源管理器中「通过 UACToolBox 运行」「添加到 UACToolBox…」。
 - **组件状态面板**：任务、配置文件、环境变量、右键菜单红绿圆点实时显示，支持一键注册。
+- **多语言**：内置简体中文与 English，JSON 内嵌、单文件友好，设置页实时切换；把 `语言代码.json`（如 `fr-FR.json`）放入 `%APPDATA%` 下的 `XianTrace/UACToolBox/languages` 目录即可追加语言；安装向导双语。
 - **首次启动引导**：无配置且无任何注册时弹窗引导完成注册。
 
 ## 安装
@@ -43,6 +44,7 @@ dotnet run --project tests/WindowsIntegration.Tests -c Release
 | `src/Config` | 配置界面（WPF UI，普通权限） |
 | `src/Launcher` | 无窗口客户端与计划任务执行端 |
 | `src/WindowsIntegration` | 计划任务、快捷方式、ACL 与通信封装 |
+| `src/Localization` | JSON 多语言资源与加载器 |
 | `src/Contracts` | 配置模型与通信协议 |
 | `installer/` | Inno Setup 安装脚本与发行说明模板 |
 | `scripts/` | 发布（`publish.ps1`）、打包（`build-setup.ps1`）、发版（`release.ps1`）、图标生成 |
