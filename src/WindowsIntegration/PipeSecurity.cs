@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
+using UACToolBox.Localization;
 namespace UACToolBox.WindowsIntegration;
 
 public static class PipeSecurity
@@ -32,11 +33,11 @@ public static class PipeSecurity
         {
             using var identity = WindowsIdentity.GetCurrent(true) ?? throw new UnauthorizedAccessException();
             if (identity.User?.Value != owner || Integrity(identity.AccessToken) < 0x2000)
-                throw new UnauthorizedAccessException("请求者身份或完整性级别不符。");
+                throw new UnauthorizedAccessException(Loc.T("err.pipeClientIdentity"));
         });
         if (!GetNamedPipeClientProcessId(pipe.SafePipeHandle, out uint pid) ||
             !ProcessIdToSessionId(pid, out uint session) || session != Process.GetCurrentProcess().SessionId)
-            throw new UnauthorizedAccessException("请求会话不符。");
+            throw new UnauthorizedAccessException(Loc.T("err.pipeSession"));
     }
     public static void VerifyConfigurationClient(NamedPipeServerStream pipe)
     {
@@ -47,28 +48,28 @@ public static class PipeSecurity
         var (expected, hash) = Store.RegisteredConfigExe();
         if (process.IsInvalid || expected is null || hash is null || !QueryFullProcessImageName(process, 0, path, ref length) ||
             !string.Equals(Path.GetFullPath(path.ToString()), Path.GetFullPath(expected), StringComparison.OrdinalIgnoreCase))
-            throw new UnauthorizedAccessException("仅接受本安装的配置界面提交保存。");
+            throw new UnauthorizedAccessException(Loc.T("err.pipeConfigCaller"));
         // 调用方镜像须与注册时记录的哈希一致；界面文件被替换（安装目录用户可写）即拒绝。
         using var sha = System.Security.Cryptography.SHA256.Create();
         if (!string.Equals(Convert.ToHexString(sha.ComputeHash(File.ReadAllBytes(path.ToString()))), hash, StringComparison.OrdinalIgnoreCase))
-            throw new UnauthorizedAccessException("配置界面文件与注册时不一致，请修复安装。");
+            throw new UnauthorizedAccessException(Loc.T("err.pipeConfigHash"));
     }
     public static void VerifyServer(NamedPipeClientStream pipe)
     {
         if (!GetNamedPipeServerProcessId(pipe.SafePipeHandle, out uint pid)) throw new Win32Exception();
         using var process = OpenProcess(0x1000, false, pid);
-        if (process.IsInvalid || !OpenProcessToken(process, 8, out var token)) throw new UnauthorizedAccessException("无法核验执行端。");
+        if (process.IsInvalid || !OpenProcessToken(process, 8, out var token)) throw new UnauthorizedAccessException(Loc.T("err.pipeVerifyServer"));
         using (token)
         using (var identity = new WindowsIdentity(token.DangerousGetHandle()))
         {
             if (identity.User?.Value != Access.Sid || Integrity(token) < 0x3000 ||
                 !ProcessIdToSessionId(pid, out uint session) || session != Process.GetCurrentProcess().SessionId)
-                throw new UnauthorizedAccessException("执行端身份、权限或会话不符。");
+                throw new UnauthorizedAccessException(Loc.T("err.pipeServerIdentity"));
         }
         var name = new StringBuilder(32768); uint length = (uint)name.Capacity;
         if (!QueryFullProcessImageName(process, 0, name, ref length) ||
             !string.Equals(Path.GetFullPath(name.ToString()), Path.GetFullPath(Store.LauncherPath), StringComparison.OrdinalIgnoreCase))
-            throw new UnauthorizedAccessException("执行端路径不符，请修复安装。");
+            throw new UnauthorizedAccessException(Loc.T("err.pipeServerPath"));
         Access.ProtectedPath(name.ToString());
         Access.ProtectedPath(Path.GetDirectoryName(name.ToString())!, true);
     }

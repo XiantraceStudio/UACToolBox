@@ -17,9 +17,9 @@ public sealed class ManagerActivation(string name) : IDisposable
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stopping.Token);
                 timeout.CancelAfter(TimeSpan.FromSeconds(5));
                 var request = await Wire.ReadAsync<ManagerRequest>(pipe, timeout.Token);
-                if (request.Arguments is not ([] or ["import", _])) throw new InvalidDataException("无效的管理界面请求。");
+                if (request.Arguments is not ([] or ["import", _])) throw new InvalidDataException(UACToolBox.Localization.Loc.T("err.invalidActivation"));
                 enqueue(request.Arguments);
-                await ResponseDelivery.SendAsync(pipe, new(Guid.Empty, ResultCode.Success, "已交给已有窗口"), timeout.Token);
+                await ResponseDelivery.SendAsync(pipe, new(Guid.Empty, ResultCode.Success, UACToolBox.Localization.Loc.T("msg.forwarded")), timeout.Token);
             }
             catch (Exception ex) when (ex is IOException or InvalidDataException or OperationCanceledException or System.Text.Json.JsonException) { }
         }

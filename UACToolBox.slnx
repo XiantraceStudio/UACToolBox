@@ -1,6 +1,7 @@
 <Solution>
  <Folder Name="/src/">
   <Project Path="src/Contracts/Contracts.csproj" />
+  <Project Path="src/Localization/Localization.csproj" />
   <Project Path="src/WindowsIntegration/WindowsIntegration.csproj" />
   <Project Path="src/Launcher/Launcher.csproj" />
   <Project Path="src/Config/Config.csproj" />

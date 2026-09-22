@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using UACToolBox.Localization;
 namespace UACToolBox.WindowsIntegration;
 public static class Maintenance
 {
@@ -6,7 +7,7 @@ public static class Maintenance
     public static void Perform(string operation, string owner)
     {
         Access.RequireAdmin();
-        if (Access.Sid != owner) throw new UnauthorizedAccessException("请使用当前用户的管理员权限，不能使用其他账户凭据。");
+        if (Access.Sid != owner) throw new UnauthorizedAccessException(Loc.T("err.ownerMismatch"));
         switch (operation)
         {
             case "register": Scheduler.Install(); DesktopIntegration.SetEnvironment(true); DesktopIntegration.SetMenus(true); break;
@@ -16,7 +17,7 @@ public static class Maintenance
             case "environment-remove": DesktopIntegration.SetEnvironment(false); break;
             case "menus-add": EnsureProtectedRuntime(); DesktopIntegration.SetMenus(true); break;
             case "menus-remove": DesktopIntegration.SetMenus(false); break;
-            default: throw new ArgumentException("不支持的系统设置操作。");
+            default: throw new ArgumentException(Loc.T("err.opUnsupported"));
         }
     }
     /// <summary>
@@ -26,18 +27,18 @@ public static class Maintenance
     /// </summary>
     static void EnsureProtectedRuntime()
     {
-        if (!File.Exists(Store.LauncherPath)) throw new FileNotFoundException("执行端尚未部署，请先安装计划任务。", Store.LauncherPath);
+        if (!File.Exists(Store.LauncherPath)) throw new FileNotFoundException(Loc.T("err.brokerNotDeployed"), Store.LauncherPath);
         Access.ProtectedPath(Store.LauncherPath);
         Access.ProtectedPath(Store.Root, true);
     }
     public static async Task RunAsync(string operation)
     {
-        if (!IsSupported(operation)) throw new ArgumentException("不支持的系统设置操作。");
+        if (!IsSupported(operation)) throw new ArgumentException(Loc.T("err.opUnsupported"));
         if (Access.IsAdmin) { Perform(operation, Access.Sid); return; }
         var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "Config.exe")) { UseShellExecute = true, Verb = "runas" };
         start.ArgumentList.Add("--admin-operation"); start.ArgumentList.Add(operation); start.ArgumentList.Add(Access.Sid);
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("未能打开系统设置授权。");
+        using var process = Process.Start(start) ?? throw new InvalidOperationException(Loc.T("err.cantElevate"));
         await process.WaitForExitAsync();
-        if (process.ExitCode != 0) throw new InvalidOperationException("系统设置未完成，请查看管理员操作提示。");
+        if (process.ExitCode != 0) throw new InvalidOperationException(Loc.T("err.opAborted"));
     }
 }

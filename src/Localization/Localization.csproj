@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+<!-- 文件名不用点分文化段（Strings.zh-CN.json 会被 MSBuild 推断为附属程序集资源） -->
+<ItemGroup>
+  <EmbeddedResource Include="strings-zh-CN.json" LogicalName="strings-zh-CN.json" />
+  <EmbeddedResource Include="strings-en-US.json" LogicalName="strings-en-US.json" />
+</ItemGroup></Project>

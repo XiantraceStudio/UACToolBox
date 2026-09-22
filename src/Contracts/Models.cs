@@ -24,7 +24,7 @@ public sealed record Configuration
     {
         Validate(owner);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(this, JsonDefaults.Options);
-        if (bytes.Length > MaxStorageBytes) throw new InvalidDataException("配置总大小超过限制，请减少条目或参数长度。");
+        if (bytes.Length > MaxStorageBytes) throw new InvalidDataException(UACToolBox.Localization.Loc.T("err.configSizeLimit"));
         return bytes;
     }
     public int SchemaVersion { get; init; } = 1;
@@ -34,17 +34,17 @@ public sealed record Configuration
     public void Validate(string owner)
     {
         if (SchemaVersion != 1 || Revision < 0 || Revision == long.MaxValue || OwnerSid != owner)
-            throw new InvalidDataException("配置版本或所属账户不匹配。");
+            throw new InvalidDataException(UACToolBox.Localization.Loc.T("err.configOwnerMismatch"));
         if (Entries is null || Entries.Count > 500 || Entries.Any(x => x is null))
-            throw new InvalidDataException("配置条目无效。");
+            throw new InvalidDataException(UACToolBox.Localization.Loc.T("err.configEntryInvalid"));
         if (Entries.Select(x => x.Id).Distinct().Count() != Entries.Count)
-            throw new InvalidDataException("配置含重复 ID。");
+            throw new InvalidDataException(UACToolBox.Localization.Loc.T("err.configDuplicateId"));
         foreach (var e in Entries)
             if (e.Id == Guid.Empty || string.IsNullOrWhiteSpace(e.ShortcutName) ||
                 string.IsNullOrWhiteSpace(e.ExecutablePath) || string.IsNullOrWhiteSpace(e.WorkingDirectory) ||
                 e.ArgumentsRaw is null || e.ArgumentsRaw.Length > 24000 ||
                 e.ArgumentsRaw.Contains((char)0) || e.ShowMode is not (1 or 3 or 7))
-                throw new InvalidDataException("配置中存在无效名称、路径、参数或窗口状态。");
+                throw new InvalidDataException(UACToolBox.Localization.Loc.T("err.configFieldsInvalid"));
     }
 }
 public enum ResultCode { Success, InvalidInput, NotInstalled, NotAuthorized, StartFailed, Busy, Unknown }

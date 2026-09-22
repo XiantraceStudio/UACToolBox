@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using UACToolBox.WindowsIntegration;
+using UACToolBox.Localization;
 namespace UACToolBox.Config;
 public partial class App : Application
 {
@@ -18,7 +19,7 @@ public partial class App : Application
             // 安装器等已提权调用方使用 self 形式，以自身账户为授权对象。
             string owner = e.Args[0] == "--admin-operation-self" ? Access.Sid : e.Args[2];
             try { Maintenance.Perform(e.Args[1], owner); Shutdown(); }
-            catch (Exception ex) { MessageBox.Show(ex.Message, "系统设置未完成"); Shutdown(1); }
+            catch (Exception ex) { MessageBox.Show(ex.Message, Loc.T("msg.opFailed")); Shutdown(1); }
             return;
         }
         string name = $"LaunchManager-Config-{Access.Sid}-{Process.GetCurrentProcess().SessionId}";
@@ -38,12 +39,12 @@ public partial class App : Application
             window.Show();
             ShutdownMode = ShutdownMode.OnMainWindowClose;
         }
-        catch (Exception ex) { MessageBox.Show(ex.Message, "无法打开配置界面"); Shutdown(1); }
+        catch (Exception ex) { MessageBox.Show(ex.Message, Loc.T("msg.configOpenFailed")); Shutdown(1); }
     }
     async Task Listen(MainWindow window)
     {
         try { await activation!.ListenAsync(args => Dispatcher.BeginInvoke(new Action(() => Enqueue(window, args)))); }
-        catch (Exception ex) { if (!Dispatcher.HasShutdownStarted) MessageBox.Show(window, ex.Message, "窗口复用连接失败"); }
+        catch (Exception ex) { if (!Dispatcher.HasShutdownStarted) MessageBox.Show(window, ex.Message, Loc.T("msg.reuseFailed")); }
     }
     void Enqueue(MainWindow window, string[] args)
     {

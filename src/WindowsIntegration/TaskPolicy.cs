@@ -1,6 +1,7 @@
 using System.Security.AccessControl;
 using System.Xml;
 using System.Xml.Linq;
+using UACToolBox.Localization;
 namespace UACToolBox.WindowsIntegration;
 public enum InstallationState { Missing, Ready, NeedsRepair, Conflict }
 public sealed record InstallationStatus(InstallationState State, string Message);
@@ -13,7 +14,7 @@ public static class TaskPolicy
         var root = XElement.Load(reader); XNamespace ns = "http://schemas.microsoft.com/windows/2004/02/mit/task";
         string Value(XElement? parent, string name) => parent?.Element(ns + name)?.Value ?? "";
         if (root.Name != ns + "Task" || Value(root.Element(ns + "RegistrationInfo"), "Description") != Marker)
-            return new(InstallationState.Conflict, "同名计划任务不属于本工具。");
+            return new(InstallationState.Conflict, Loc.T("status.task.conflict"));
         var principals = root.Element(ns + "Principals")?.Elements(ns + "Principal").ToArray() ?? [];
         var actions = root.Element(ns + "Actions")?.Elements().ToArray() ?? [];
         var settings = root.Element(ns + "Settings");
@@ -30,9 +31,9 @@ public static class TaskPolicy
             !(root.Element(ns + "Triggers")?.Elements().Any() ?? false) &&
             Value(settings, "MultipleInstancesPolicy") == "IgnoreNew" && Value(settings, "Enabled") != "false" &&
             Value(settings, "AllowStartOnDemand") != "false";
-        if (!valid) return new(InstallationState.NeedsRepair, "任务身份、执行路径或启动设置与当前安装不一致，请修复。");
-        if (!SecureDescriptor(security, sid)) return new(InstallationState.NeedsRepair, "任务访问权限不符合要求，请修复。");
-        return new(InstallationState.Ready, "计划任务身份、执行动作及访问权限检查通过。");
+        if (!valid) return new(InstallationState.NeedsRepair, Loc.T("status.task.repair"));
+        if (!SecureDescriptor(security, sid)) return new(InstallationState.NeedsRepair, Loc.T("status.task.acl"));
+        return new(InstallationState.Ready, Loc.T("status.task.ready"));
     }
     public static bool SecureDescriptor(string sddl, string sid)
     {

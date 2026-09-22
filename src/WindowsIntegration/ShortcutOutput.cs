@@ -16,7 +16,7 @@ public static class ShortcutOutput
             device.Length == 4 && (device.StartsWith("COM") || device.StartsWith("LPT")) && "123456789¹²³".Contains(device[3]);
         if (string.IsNullOrWhiteSpace(name) || name.Length > 251 || name.EndsWith('.') || name.EndsWith(' ') ||
             name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || reserved)
-            throw new InvalidDataException("快捷方式名称无效：请勿填写路径、特殊字符、系统保留名或末尾空格、句点。");
+            throw new InvalidDataException(UACToolBox.Localization.Loc.T("err.shortcutNameInvalid"));
         return name;
     }
     public static string GetPath(string name, string? customDirectory)
@@ -24,7 +24,7 @@ public static class ShortcutOutput
         string directory = string.IsNullOrEmpty(customDirectory)
             ? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) : customDirectory;
         if (!Path.IsPathFullyQualified(directory) || !Directory.Exists(directory))
-            throw new DirectoryNotFoundException("快捷方式创建位置不存在，请重新选择文件夹。");
+            throw new DirectoryNotFoundException(UACToolBox.Localization.Loc.T("err.shortcutDirMissing"));
         return Path.Combine(directory, NormalizeName(name) + ".lnk");
     }
 }

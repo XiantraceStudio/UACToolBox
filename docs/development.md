@@ -180,3 +180,7 @@ assets/app.ico 由 scripts/make-icon.ps1 生成（8 尺寸 PNG ICO，深灰圆�
 ## 运行端迁移：安装目录不再要求受保护
 
 按"不修改用户目录任何权限"的要求，撤销父目录链收紧方案，改为运行端迁移架构：提权执行端 Launcher.exe 在注册（Scheduler.Install）时从安装目录复制到受保护的配置根目录 ProgramData\XianTrace\UACToolBox 并经 ACL 校验；计划任务动作、工作目录、环境变量、右键菜单运行项与快捷方式全部指向该位置。Store.LauncherPath 语义改为运行端路径，新增 LauncherSource（安装目录来源副本）。保存配置的调用方核验（PipeSecurity.VerifyConfigurationClient）改为注册表 HKLM\SOFTWARE\XianTrace\UACToolBox 记录的配置界面路径 + SHA-256：安装目录因此可以任意选择（含用户可写位置），界面文件被替换即拒绝保存，提权边界不受影响；卸载时清除注册记录。安装向导取消自定义目录警告。
+
+## 国际化（JSON 资源 + 可追加语言包）
+
+新增 src/Localization：语言表为内嵌 JSON（zh-CN 默认回退 + en-US），Loc 加载器按 精确文化→父文化→zh-CN 解析，缺失键返回键名。关键教训：EmbeddedResource 文件名含点分文化段（Strings.zh-CN.json）会被 MSBuild 推断为附属程序集资源而拆出主 DLL——文件命名改为 strings-<culture>.json 规避，单文件发布保持零附属文件。语言偏好存 %APPDATA%\XianTrace\UACToolBox\settings.json，Config/提权子进程/执行端启动时自动读取，跨进程文化一致且无需改协议；右键菜单动词按当前语言注册。Config 界面经 {loc:Loc key} MarkupExtension 绑定 Loc 索引器，设置页下拉实时切换（含编辑页标题与状态刷新）；追加语言仅需在 languages 目录放 语言代码.json。Inno 向导双语（[Languages] + CustomMessages，注意消息前缀须为语言条目名）。集成检查 59 项：固定 zh-CN 文化、内嵌表键集一致、语言包发现、覆盖与回退。

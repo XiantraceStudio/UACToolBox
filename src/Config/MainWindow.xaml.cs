@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using UACToolBox.Contracts;
 using UACToolBox.WindowsIntegration;
+using UACToolBox.Localization;
 using Microsoft.Win32;
 namespace UACToolBox.Config;
 public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
@@ -15,28 +16,29 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     bool busy;
     bool activating;
     bool filling;
+    bool selectingLanguage;
     string? suggestedName;
     readonly Queue<string[]> pendingActivations = new();
     public MainWindow()
     {
         InitializeComponent();
-        Closing += (_, e) => { if (busy) { e.Cancel = true; Report("正在完成操作，请稍候再关闭。"); } };
+        Closing += (_, e) => { if (busy) { e.Cancel = true; Report(Loc.T("msg.busyClose")); } };
         Loaded += (_, _) => Run(() =>
         {
-            configuration = Store.Load(); loaded = true; RefreshList(); Fill(new()); Run(RefreshStatus); Run(MaybeOfferOnboarding);
-
+            configuration = Store.Load(); loaded = true; RefreshList(); Fill(new()); Run(RefreshStatus); Run(MaybeOfferOnboarding); LoadLanguages();
         });
+        Loc.CultureChanged += () => Dispatcher.BeginInvoke(() => { if (!loaded) return; UpdateEditorTitle(); Run(RefreshStatus); });
     }
     void Run(Action action)
     {
         try { action(); }
-        catch (Exception ex) { Report(ex.Message); MessageBox.Show(this, ex.Message, "操作未完成", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        catch (Exception ex) { Report(ex.Message); MessageBox.Show(this, ex.Message, Loc.T("msg.opFailed"), MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
     async Task RunAsync(Func<Task> action)
     {
         busy = true; Pages.IsEnabled = false;
         try { await action(); }
-        catch (Exception ex) { Report(ex.Message); MessageBox.Show(this, ex.Message, "操作未完成", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        catch (Exception ex) { Report(ex.Message); MessageBox.Show(this, ex.Message, Loc.T("msg.opFailed"), MessageBoxButton.OK, MessageBoxImage.Warning); }
         finally
         {
             busy = false; Pages.IsEnabled = true;
@@ -49,6 +51,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         string text = SearchBox.Text.Trim();
         EntriesList.ItemsSource = configuration.Entries.Where(e => e.ShortcutName.Contains(text, StringComparison.OrdinalIgnoreCase) || e.ExecutablePath.Contains(text, StringComparison.OrdinalIgnoreCase)).ToArray();
     }
+    void UpdateEditorTitle()
+    {
+        bool existing = configuration.Entries.Any(e => e.Id == editing.Id);
+        EditorTitle.Text = Loc.T(existing ? "editor.edit.title" : "editor.create.title");
+    }
     void Fill(LaunchEntry entry)
     {
         filling = true;
@@ -56,7 +63,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         try
         {
             bool existing = configuration.Entries.Any(e => e.Id == entry.Id);
-            EditorTitle.Text = existing ? "编辑快捷方式" : "创建快捷方式";
             suggestedName = existing ? null : entry.ShortcutName;
             editing = entry; NameInput.Text = entry.ShortcutName; PathInput.Text = entry.ExecutablePath;
             ArgumentsInput.Text = entry.ArgumentsRaw; DirectoryInput.Text = entry.WorkingDirectory;
@@ -65,6 +71,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             DestinationPathInput.Text = entry.ShortcutDirectory;
             DestinationInput.SelectedIndex = string.IsNullOrEmpty(entry.ShortcutDirectory) ? 0 : 1;
             CustomDestinationPanel.Visibility = DestinationInput.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+            UpdateEditorTitle();
         }
         finally { filling = false; }
     }
@@ -77,7 +84,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     }
     bool ChooseDestination()
     {
-        var dialog = new OpenFolderDialog { Title = "选择快捷方式创建位置", Multiselect = false };
+        var dialog = new OpenFolderDialog { Title = Loc.T("editor.dest.pick.title"), Multiselect = false };
         if (Directory.Exists(DestinationPathInput.Text)) dialog.InitialDirectory = DestinationPathInput.Text;
         if (dialog.ShowDialog(this) != true) return false;
         DestinationPathInput.Text = dialog.FolderName;
@@ -97,24 +104,24 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         if (string.Equals(entry.ExecutablePath, Store.LauncherPath, StringComparison.OrdinalIgnoreCase))
         {
             if (entry.ArgumentsRaw.StartsWith("launch ") && Guid.TryParse(entry.ArgumentsRaw[7..], out var id))
-                entry = configuration.Entries.SingleOrDefault(e => e.Id == id) ?? throw new InvalidDataException("此快捷方式的授权项已不存在。");
-            else throw new InvalidDataException("不能将启动器本身作为目标。");
+                entry = configuration.Entries.SingleOrDefault(e => e.Id == id) ?? throw new InvalidDataException(Loc.T("err.legacyEntryGone"));
+            else throw new InvalidDataException(Loc.T("err.selfTarget"));
         }
         if (!ConfirmReplace()) return;
-        Fill(entry); Pages.SelectedItem = EditorPage; Report("已回填，请检查参数和工作目录后保存。");
+        Fill(entry); Pages.SelectedItem = EditorPage; Report(Loc.T("msg.imported"));
     }
     async Task<LaunchEntry> SaveAsync()
     {
-        if (!loaded) throw new InvalidOperationException("配置尚未加载。");
+        if (!loaded) throw new InvalidOperationException(Loc.T("err.configNotLoaded"));
         string path = Path.GetFullPath(PathInput.Text.Trim());
         string directory = string.IsNullOrWhiteSpace(DirectoryInput.Text) ? Path.GetDirectoryName(path)! : Path.GetFullPath(DirectoryInput.Text.Trim());
-        if (string.Equals(path, Store.LauncherPath, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("不能将启动器本身作为目标。");
+        if (string.Equals(path, Store.LauncherPath, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException(Loc.T("err.selfTarget"));
         var entry = editing with { ShortcutName = ShortcutOutput.NormalizeName(NameInput.Text), ShortcutDirectory = DestinationInput.SelectedIndex == 1 ? DestinationPathInput.Text : "", ExecutablePath = path, ArgumentsRaw = ArgumentsInput.Text,
             WorkingDirectory = directory, ShowMode = ShowInput.SelectedIndex switch { 1 => 7, 2 => 3, _ => 1 },
             IconPath = IconInput.Text.Trim(), IconIndex = int.Parse(IconIndexInput.Text), Enabled = EnabledInput.IsChecked == true };
         if (entry.Enabled) Access.ValidateTarget(path, directory);
         var next = configuration with { Entries = configuration.Entries.Where(e => e.Id != entry.Id).Append(entry).ToList() };
-        await ConfigurationClient.SaveAsync(next); configuration = Store.Load(); Fill(entry); RefreshList(); RefreshStatus(); Report("配置已保存。"); return entry;
+        await ConfigurationClient.SaveAsync(next); configuration = Store.Load(); Fill(entry); RefreshList(); RefreshStatus(); Report(Loc.T("msg.saved")); return entry;
     }
     void PageChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -124,13 +131,13 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         bool taskOk = false, environmentOk = false, menusOk = false;
         try { var task = Scheduler.Inspect(); taskOk = task.State == InstallationState.Ready; SetStatus(InstallDot, InstallStatus, task.Message, taskOk); }
-        catch (Exception ex) { SetStatus(InstallDot, InstallStatus, "检测失败：" + ex.Message, false); }
-        try { bool saved = File.Exists(Store.FilePath); SetStatus(ConfigurationDot, ConfigurationStatus, (saved ? $"正常，{Store.Load().Entries.Count} 项" : "尚未保存") + "\n" + Store.FilePath, saved); }
-        catch (Exception ex) { SetStatus(ConfigurationDot, ConfigurationStatus, "检测失败：" + ex.Message + "\n" + Store.FilePath, false); }
+        catch (Exception ex) { SetStatus(InstallDot, InstallStatus, Loc.T("status.detectFailed", ex.Message), false); }
+        try { bool saved = File.Exists(Store.FilePath); SetStatus(ConfigurationDot, ConfigurationStatus, (saved ? Loc.T("status.config.ok", Store.Load().Entries.Count) : Loc.T("status.config.none")) + "\n" + Store.FilePath, saved); }
+        catch (Exception ex) { SetStatus(ConfigurationDot, ConfigurationStatus, Loc.T("status.detectFailed", ex.Message) + "\n" + Store.FilePath, false); }
         try { var environment = DesktopIntegration.InspectEnvironment(); environmentOk = environment.Ready; SetStatus(EnvironmentDot, EnvironmentStatus, environment.Message, environmentOk); }
-        catch (Exception ex) { SetStatus(EnvironmentDot, EnvironmentStatus, "检测失败：" + ex.Message, false); }
+        catch (Exception ex) { SetStatus(EnvironmentDot, EnvironmentStatus, Loc.T("status.detectFailed", ex.Message), false); }
         try { var menus = DesktopIntegration.InspectMenus(); menusOk = menus.Ready; SetStatus(MenusDot, MenusStatus, menus.Message, menusOk); }
-        catch (Exception ex) { SetStatus(MenusDot, MenusStatus, "检测失败：" + ex.Message, false); }
+        catch (Exception ex) { SetStatus(MenusDot, MenusStatus, Loc.T("status.detectFailed", ex.Message), false); }
         // 一键注册覆盖任务、环境变量、右键菜单；配置文件不属于注册项。
         RegisterButton.IsEnabled = !(taskOk && environmentOk && menusOk);
     }
@@ -142,7 +149,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     }
     bool HasEditorData => new[] { NameInput.Text, PathInput.Text, ArgumentsInput.Text, DirectoryInput.Text, IconInput.Text }.Any(x => !string.IsNullOrWhiteSpace(x)) || IconIndexInput.Text != "0" || ShowInput.SelectedIndex != 0 || EnabledInput.IsChecked != true || DestinationInput.SelectedIndex != 0;
     bool ConfirmReplace() => !HasEditorData || MessageBox.Show(this,
-        "创建／编辑页已有填写或预填数据。是否覆盖？选择否将保留当前内容。", "覆盖当前填写内容",
+        Loc.T("msg.confirmOverwrite"), Loc.T("msg.overwriteTitle"),
         MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) == MessageBoxResult.Yes;
     public void HandleActivation(string[] args)
     {
@@ -175,17 +182,17 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         if (EntriesList.SelectedItem is not LaunchEntry entry || !ConfirmReplace()) return;
         Fill(entry); Pages.SelectedItem = EditorPage;
     }
-    void ImportClick(object sender, RoutedEventArgs e) => Run(() => { var dialog = new OpenFileDialog { Filter = "程序或快捷方式|*.exe;*.lnk" }; if (dialog.ShowDialog(this) == true) Import(dialog.FileName); });
+    void ImportClick(object sender, RoutedEventArgs e) => Run(() => { var dialog = new OpenFileDialog { Filter = "EXE / LNK|*.exe;*.lnk" }; if (dialog.ShowDialog(this) == true) Import(dialog.FileName); });
     async void SaveClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await SaveAsync(); });
     async void ShortcutClick(object sender, RoutedEventArgs e) => await RunAsync(async () =>
     {
         string output = ShortcutOutput.GetPath(NameInput.Text, DestinationInput.SelectedIndex == 1 ? DestinationPathInput.Text : "");
-        if (File.Exists(output) && MessageBox.Show(this, $"此快捷方式已存在，是否覆盖？\n{output}", "覆盖快捷方式",
+        if (File.Exists(output) && MessageBox.Show(this, string.Format(Loc.T("msg.confirmShortcut"), output), Loc.T("msg.shortcutOverTitle"),
             MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         var entry = await SaveAsync();
         Shortcuts.Create(output, entry);
         Fill(new());
-        Report("已创建快捷方式：" + output);
+        Report(string.Format(System.Globalization.CultureInfo.CurrentCulture, Loc.T("msg.shortcutCreated"), output));
     });
     void SelectContextItem(object sender, MouseButtonEventArgs e)
     {
@@ -202,7 +209,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         if (e is MouseButtonEventArgs mouse && ItemsControl.ContainerFromElement(EntriesList, mouse.OriginalSource as DependencyObject) is not ListBoxItem) return;
         if (EntriesList.SelectedItem is not LaunchEntry entry) return;
-        if (!entry.Enabled) throw new InvalidOperationException("此项已停用，请先编辑并启用。");
+        if (!entry.Enabled) throw new InvalidOperationException(Loc.T("err.disabled"));
         var start = new ProcessStartInfo(Store.LauncherPath) { UseShellExecute = false };
         start.ArgumentList.Add("launch"); start.ArgumentList.Add(entry.Id.ToString());
         using var process = Process.Start(start);
@@ -210,18 +217,19 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     async void DeleteClick(object sender, RoutedEventArgs e) => await RunAsync(async () =>
     {
         if (EntriesList.SelectedItem is not LaunchEntry entry) return;
-        if (MessageBox.Show(this, $"删除 {entry.ShortcutName}？已有快捷方式将失效。", "删除", MessageBoxButton.YesNo,
+        if (MessageBox.Show(this, string.Format(Loc.T("msg.confirmDelete"), entry.ShortcutName), Loc.T("msg.deleteTitle"), MessageBoxButton.YesNo,
             MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         await ConfigurationClient.SaveAsync(configuration with { Entries = configuration.Entries.Where(x => x.Id != entry.Id).ToList() });
         configuration = Store.Load(); RefreshList();
         if (editing.Id == entry.Id) Fill(new());
-        RefreshStatus(); Report("已删除。");
+        RefreshStatus(); Report(Loc.T("msg.deleted"));
     });
-    async void InstallClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await Maintenance.RunAsync("install"); RefreshStatus(); Report("计划任务已安装。环境变量及右键菜单请分别设置。"); });
+    async void InstallClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await Maintenance.RunAsync("install"); RefreshStatus(); Report(Loc.T("msg.taskInstalled")); });
+    void RefreshClick(object sender, RoutedEventArgs e) => Run(RefreshStatus);
     async void RegisterClick(object sender, RoutedEventArgs e) => await RunAsync(async () =>
     {
         await Maintenance.RunAsync("register"); RefreshStatus();
-        Report("一键注册完成：计划任务、环境变量、右键菜单已设置。");
+        Report(Loc.T("msg.registerDone"));
     });
     void MaybeOfferOnboarding()
     {
@@ -233,20 +241,43 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             if (DesktopIntegration.InspectMenus().Ready) return;
         }
         catch { return; }
-        if (MessageBox.Show(this, "尚未注册任何系统组件，快捷方式暂无法免 UAC 启动。\n\n现在前往「设置 → 系统」完成一键注册？", "欢迎使用 UACToolBox",
+        if (MessageBox.Show(this, Loc.T("msg.onboarding"), Loc.T("msg.welcomeTitle"),
             MessageBoxButton.YesNo, MessageBoxImage.Information) == MessageBoxResult.Yes)
             Pages.SelectedItem = SettingsPage;
     }
-    void RefreshClick(object sender, RoutedEventArgs e) => Run(RefreshStatus);
     async void UninstallClick(object sender, RoutedEventArgs e) => await RunAsync(async () =>
     {
-        if (MessageBox.Show(this, "卸载计划任务？保留授权配置和快捷方式，已有快捷方式将无法启动。", "卸载任务", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-        await Maintenance.RunAsync("uninstall"); RefreshStatus(); Report("计划任务已卸载。右键菜单可单独移除。");
+        if (MessageBox.Show(this, Loc.T("msg.confirmUninstall"), Loc.T("msg.uninstallTitle"), MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+        await Maintenance.RunAsync("uninstall"); RefreshStatus(); Report(Loc.T("msg.taskUninstalled"));
     });
-    async void EnvironmentClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await Maintenance.RunAsync("environment-add"); RefreshStatus(); Report("环境变量已更新。"); });
-    async void RemoveEnvironmentClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await Maintenance.RunAsync("environment-remove"); RefreshStatus(); Report("已处理环境变量移除；其他安装的值保持不变。"); });
-    async void MenusClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await Maintenance.RunAsync("menus-add"); RefreshStatus(); Report("右键菜单已注册。"); });
-    async void RemoveMenusClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await Maintenance.RunAsync("menus-remove"); RefreshStatus(); Report("右键菜单已移除。"); });
+    async void EnvironmentClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await Maintenance.RunAsync("environment-add"); RefreshStatus(); Report(Loc.T("msg.envUpdated")); });
+    async void RemoveEnvironmentClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await Maintenance.RunAsync("environment-remove"); RefreshStatus(); Report(Loc.T("msg.envRemoved")); });
+    async void MenusClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await Maintenance.RunAsync("menus-add"); RefreshStatus(); Report(Loc.T("msg.menusAdded")); });
+    async void RemoveMenusClick(object sender, RoutedEventArgs e) => await RunAsync(async () => { await Maintenance.RunAsync("menus-remove"); RefreshStatus(); Report(Loc.T("msg.menusRemoved")); });
     void SearchChanged(object sender, TextChangedEventArgs e) { if (loaded) RefreshList(); }
-
+    void LoadLanguages()
+    {
+        selectingLanguage = true;
+        try
+        {
+            LanguageBox.ItemsSource = Loc.AvailableCultures
+                .Select(name => { try { return System.Globalization.CultureInfo.GetCultureInfo(name); } catch (System.Globalization.CultureNotFoundException) { return null; } })
+                .Where(culture => culture is not null)
+                .Select(culture => culture!.NativeName)
+                .ToArray();
+            var current = System.Globalization.CultureInfo.GetCultureInfo(Loc.Current).NativeName;
+            var index = Array.IndexOf((string[])LanguageBox.ItemsSource, current);
+            LanguageBox.SelectedIndex = index < 0 ? 0 : index;
+        }
+        finally { selectingLanguage = false; }
+    }
+    void LanguageChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (selectingLanguage || LanguageBox.SelectedItem is not string name) return;
+        var match = Loc.AvailableCultures.FirstOrDefault(culture =>
+            string.Equals(System.Globalization.CultureInfo.GetCultureInfo(culture).NativeName, name, StringComparison.OrdinalIgnoreCase));
+        if (match is null) return;
+        Loc.SetCulture(match);
+        LoadLanguages();
+    }
 }

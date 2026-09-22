@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using UACToolBox.Localization;
 namespace UACToolBox.WindowsIntegration;
 public static class Scheduler
 {
@@ -27,7 +28,7 @@ public static class Scheduler
         dynamic service = Connect(scope); dynamic root = scope.Track(service.GetFolder(@"\"));
         try { return InspectTask(scope.Track(root.GetTask(TaskName))); }
         catch (Exception ex) when ((uint)ex.HResult == 0x80070002)
-        { return new(InstallationState.Missing, "尚未安装计划任务。"); }
+        { return new(InstallationState.Missing, Loc.T("status.task.missing")); }
     }
     public static bool Installed() => Inspect().State == InstallationState.Ready;
     public static void Install()
@@ -50,7 +51,7 @@ public static class Scheduler
         try
         {
             dynamic old = scope.Track(root.GetTask(TaskName));
-            if (InspectTask(old).State == InstallationState.Conflict) throw new InvalidOperationException("存在不属于本工具的同名任务。");
+            if (InspectTask(old).State == InstallationState.Conflict) throw new InvalidOperationException(Loc.T("err.taskConflict"));
             oldXml = old.Xml; oldSecurity = old.GetSecurityDescriptor(7);
         }
         catch (Exception ex) when ((uint)ex.HResult == 0x80070002) { }
@@ -81,7 +82,7 @@ public static class Scheduler
                 if (oldXml is null) root.DeleteTask(TaskName, 0);
                 else scope.Track(root.RegisterTask(TaskName, oldXml, 6 | 0x10, null, null, 3, oldSecurity));
             }
-            catch (Exception rollback) { throw new AggregateException("任务安装验证失败，回滚也失败，请检查任务计划。", original, rollback); }
+            catch (Exception rollback) { throw new AggregateException(Loc.T("err.rollback"), original, rollback); }
             throw;
         }
     }
@@ -102,7 +103,7 @@ public static class Scheduler
         dynamic task;
         try { task = scope.Track(root.GetTask(TaskName)); }
         catch (Exception ex) when ((uint)ex.HResult == 0x80070002) { return; }
-        if (InspectTask(task).State == InstallationState.Conflict) throw new InvalidOperationException("同名任务不属于本工具，未删除。");
+        if (InspectTask(task).State == InstallationState.Conflict) throw new InvalidOperationException(Loc.T("err.taskForeign"));
         task.Stop(0); root.DeleteTask(TaskName, 0);
     }
 }

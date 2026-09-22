@@ -8,7 +8,7 @@ public static class ConfigurationWriter
         foreach (var entry in config.Entries)
         {
             if (string.Equals(Path.GetFullPath(entry.ExecutablePath), Store.LauncherPath, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("不能将启动器本身作为目标。");
+                throw new InvalidDataException(UACToolBox.Localization.Loc.T("err.selfTarget"));
             if (entry.Enabled) Access.ValidateTarget(entry.ExecutablePath, entry.WorkingDirectory);
         }
     }

@@ -9,12 +9,12 @@ public static class Shortcuts
     public static LaunchEntry Import(string path)
     {
         path = Path.GetFullPath(path);
-        if (!File.Exists(path)) throw new FileNotFoundException("文件不存在。", path);
+        if (!File.Exists(path)) throw new FileNotFoundException(UACToolBox.Localization.Loc.T("err.fileMissing"), path);
         if (Path.GetExtension(path).Equals(".exe", StringComparison.OrdinalIgnoreCase))
             return new() { ShortcutName = ShortcutOutput.DefaultName(path), ExecutablePath = path,
                 WorkingDirectory = Path.GetDirectoryName(path)!, IconPath = path };
         if (!Path.GetExtension(path).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("请选择 EXE 或快捷方式。");
+            throw new InvalidDataException(UACToolBox.Localization.Loc.T("err.pickExeOrLnk"));
         var link = (IShellLinkW)new ShellLink();
         try
         {
@@ -26,7 +26,7 @@ public static class Shortcuts
             link.GetIconLocation(icon, icon.Capacity, out int index); link.GetShowCmd(out int show);
             string exe = Environment.ExpandEnvironmentVariables(target.ToString());
             if (!Path.IsPathFullyQualified(exe) || !Path.GetExtension(exe).Equals(".exe", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException("仅支持直接指向本地 EXE 的快捷方式；嵌套或特殊快捷方式请手动配置。");
+                throw new InvalidDataException(UACToolBox.Localization.Loc.T("err.lnkNotLocalExe"));
             return new() { ShortcutName = ShortcutOutput.DefaultName(path), ExecutablePath = exe,
                 ArgumentsRaw = args.ToString(), WorkingDirectory = work.Length == 0 ? Path.GetDirectoryName(exe)! : Environment.ExpandEnvironmentVariables(work.ToString()),
                 IconPath = icon.Length == 0 ? exe : Environment.ExpandEnvironmentVariables(icon.ToString()), IconIndex = index,

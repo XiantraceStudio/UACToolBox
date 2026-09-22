@@ -1,6 +1,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using UACToolBox.Contracts;
+using UACToolBox.Localization;
 using UACToolBox.WindowsIntegration;
 namespace UACToolBox.IntegrationTests;
 internal static class Program
@@ -79,9 +80,28 @@ internal static class Program
             TestDelivery().GetAwaiter().GetResult();
             TestActivation().GetAwaiter().GetResult();
             TestTaskPolicy();
+            Loc.SetCulture("zh-CN", persist: false);
             TestConfigurationValidation(executable);
             TestConfigurationCaller().GetAwaiter().GetResult();
             Check(Maintenance.IsSupported("register") && Maintenance.IsSupported("install") && Maintenance.IsSupported("menus-remove") && !Maintenance.IsSupported("save") && !Maintenance.IsSupported("cmd.exe"), "Maintenance accepts only fixed system operations");
+            Check(Loc.T("menu.open") == "打开", "Localized lookup resolves under pinned culture");
+            var zhTable = ReadEmbeddedTable("strings-zh-CN.json");
+            var enTable = ReadEmbeddedTable("strings-en-US.json");
+            Check(zhTable.Count > 150 && zhTable.Keys.ToHashSet().SetEquals(enTable.Keys), "Embedded language tables share one key set");
+            try
+            {
+                Directory.CreateDirectory(Loc.LanguagesDirectory);
+                File.WriteAllText(Path.Combine(Loc.LanguagesDirectory, "fr-FR.json"), "{ \"menu.open\": \"Ouvrir\" }");
+                Loc.Reload(); Loc.SetCulture("zh-CN", persist: false);
+                Check(Loc.AvailableCultures.Contains("fr-FR"), "Drop-in language pack discovered");
+                Loc.SetCulture("fr-FR", persist: false);
+                Check(Loc.T("menu.open") == "Ouvrir" && Loc.T("menu.edit") == "编辑", "Pack overrides its keys and missing keys fall back");
+            }
+            finally
+            {
+                try { File.Delete(Path.Combine(Loc.LanguagesDirectory, "fr-FR.json")); } catch (IOException) { }
+                Loc.Reload(); Loc.SetCulture("zh-CN", persist: false);
+            }
             Check(Store.Root.EndsWith(Path.Combine("XianTrace", "UACToolBox"), StringComparison.OrdinalIgnoreCase) && !Store.Root.Contains("LaunchManager"), "Config directory is XianTrace/UACToolBox without legacy fallback");
             var (registeredPath, registeredHash) = Store.RegisteredConfigExe();
             Check(Store.LauncherPath.StartsWith(Store.Root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
@@ -152,6 +172,13 @@ internal static class Program
             Directory.Delete(folder, true);
         }
     }
+    static Dictionary<string, string> ReadEmbeddedTable(string name)
+    {
+        using var stream = typeof(Loc).Assembly.GetManifestResourceStream(name) ?? throw new FileNotFoundException(name);
+        using var reader = new StreamReader(stream);
+        using var document = System.Text.Json.JsonDocument.Parse(reader.ReadToEnd());
+        return document.RootElement.EnumerateObject().ToDictionary(property => property.Name, property => property.Value.GetString() ?? "");
+    }
     static void TestConfigurationValidation(string executable)
     {
         var entry = new LaunchEntry { ShortcutName = "test", ExecutablePath = executable, WorkingDirectory = Environment.SystemDirectory };
@@ -179,7 +206,7 @@ internal static class Program
         try { PipeSecurity.VerifyConfigurationClient(server); throw new Exception("Unrelated test executable accepted as configuration UI"); }
         catch (UnauthorizedAccessException ex)
         {
-            Check(ex.Message.Contains("本安装的配置界面"), "Reject save caller outside installed configuration executable");
+            Check(new[] { "err.pipeClientIdentity", "err.pipeSession", "err.pipeConfigCaller" }.Select(key => Loc.T(key)).Any(text => ex.Message == text), "Reject save caller outside installed configuration executable: " + ex.Message);
         }
     }
     static void TestTaskPolicy()

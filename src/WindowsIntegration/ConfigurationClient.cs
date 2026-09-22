@@ -13,7 +13,7 @@ public static class ConfigurationClient
         try { await pipe.ConnectAsync(150, deadline.Token); }
         catch (TimeoutException)
         {
-            if (!Scheduler.Installed()) throw new InvalidOperationException("请先在设置页安装 / 修复计划任务，完成一次管理员授权后即可免提示保存。");
+            if (!Scheduler.Installed()) throw new InvalidOperationException(UACToolBox.Localization.Loc.T("err.installTaskFirst"));
             Scheduler.Run(); await pipe.ConnectAsync(deadline.Token);
         }
         PipeSecurity.VerifyServer(pipe);
@@ -22,7 +22,7 @@ public static class ConfigurationClient
         await Wire.WriteAsync(pipe, request, responseDeadline.Token);
         var ready = await ResponseDelivery.ReceiveAsync(pipe, request.RequestId, responseDeadline.Token);
         if (ready.Code != ResultCode.Success)
-            throw new InvalidOperationException(ready.Message + " 请确认已替换完整新版程序，并等待旧执行端退出。");
+            throw new InvalidOperationException(ready.Message + UACToolBox.Localization.Loc.T("err.staleBrokerSuffix"));
         try
         {
             await Wire.WriteAsync(pipe, config, responseDeadline.Token, Configuration.MaxStorageBytes);
@@ -31,7 +31,7 @@ public static class ConfigurationClient
         }
         catch (Exception ex) when (ex is IOException or OperationCanceledException)
         {
-            throw new IOException("保存连接中断或超时，结果未知。请重新打开配置界面核对已保存内容后再操作。", ex);
+            throw new IOException(UACToolBox.Localization.Loc.T("err.saveConnectionLost"), ex);
         }
     }
 }

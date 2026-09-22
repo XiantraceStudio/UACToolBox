@@ -1,5 +1,6 @@
 using Microsoft.Win32;
 using System.Runtime.InteropServices;
+using UACToolBox.Localization;
 namespace UACToolBox.WindowsIntegration;
 public static class DesktopIntegration
 {
@@ -17,7 +18,7 @@ public static class DesktopIntegration
         {
             using var existing = Registry.LocalMachine.OpenSubKey(path);
             if (existing is not null && (string?)existing.GetValue("Owner") != Marker)
-                throw new InvalidOperationException("同名右键菜单不属于本工具，未修改。");
+                throw new InvalidOperationException(Loc.T("err.menuConflict"));
         }
         foreach (var path in Keys())
         {
@@ -25,7 +26,7 @@ public static class DesktopIntegration
             bool import = path.EndsWith("Import");
             using var key = Registry.LocalMachine.CreateSubKey(path);
             key.SetValue("Owner", Marker);
-            key.SetValue("MUIVerb", import ? "添加到 UACToolBox…" : "通过 UACToolBox 运行");
+            key.SetValue("MUIVerb", import ? Loc.T("verb.add") : Loc.T("verb.run"));
             key.SetValue("Icon", "\"" + Store.LauncherPath + "\",0");
             using var cmd = key.CreateSubKey("command");
             string exe = import ? Path.Combine(AppContext.BaseDirectory, "Config.exe") : Store.LauncherPath;
@@ -38,7 +39,7 @@ public static class DesktopIntegration
         var user = Environment.GetEnvironmentVariable(Store.Variable, EnvironmentVariableTarget.User);
         var effective = string.IsNullOrEmpty(user) ? machine : user;
         bool ready = string.Equals(effective, Store.LauncherPath, StringComparison.OrdinalIgnoreCase);
-        return (ready, string.IsNullOrEmpty(effective) ? "未配置" : (ready ? "正常" : "指向其他位置") + "\n" + effective);
+        return (ready, string.IsNullOrEmpty(effective) ? Loc.T("status.env.none") : (ready ? Loc.T("status.env.ok") : Loc.T("status.env.other")) + "\n" + effective);
     }
     public static (bool Ready, string Message) InspectMenus()
     {
@@ -47,15 +48,15 @@ public static class DesktopIntegration
         {
             using var key = Registry.LocalMachine.OpenSubKey(path);
             if (key is null) continue;
-            if ((string?)key.GetValue("Owner") != Marker) return (false, "存在同名冲突");
+            if ((string?)key.GetValue("Owner") != Marker) return (false, Loc.T("status.menu.conflict"));
             using var command = key.OpenSubKey("command");
             bool import = path.EndsWith("Import");
             string exe = import ? Path.Combine(AppContext.BaseDirectory, "Config.exe") : Store.LauncherPath;
             string expected = "\"" + exe + "\" " + (import ? "import" : "resolve") + " \"%1\"";
-            if (!string.Equals((string?)command?.GetValue(""), expected, StringComparison.OrdinalIgnoreCase)) return (false, "需要修复");
+            if (!string.Equals((string?)command?.GetValue(""), expected, StringComparison.OrdinalIgnoreCase)) return (false, Loc.T("status.menu.repair"));
             present++;
         }
-        return present == 4 ? (true, "正常") : present == 0 ? (false, "未注册") : (false, "注册不完整");
+        return present == 4 ? (true, Loc.T("status.menu.ok")) : present == 0 ? (false, Loc.T("status.menu.none")) : (false, Loc.T("status.menu.partial"));
     }
     public static void SetEnvironment(bool enable)
     {

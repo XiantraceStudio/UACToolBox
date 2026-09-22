@@ -2,6 +2,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
 using UACToolBox.Contracts;
+using UACToolBox.Localization;
 namespace UACToolBox.WindowsIntegration;
 public static class Store
 {
@@ -51,8 +52,8 @@ public static class Store
     {
         if (!File.Exists(FilePath)) return new() { OwnerSid = Access.Sid };
         Access.ProtectedPath(FilePath);
-        if (new FileInfo(FilePath).Length > Configuration.MaxStorageBytes) throw new InvalidDataException("配置过大。");
-        var result = JsonSerializer.Deserialize<Configuration>(File.ReadAllText(FilePath), JsonDefaults.Options) ?? throw new InvalidDataException("配置为空。");
+        if (new FileInfo(FilePath).Length > Configuration.MaxStorageBytes) throw new InvalidDataException(Loc.T("err.configTooLarge"));
+        var result = JsonSerializer.Deserialize<Configuration>(File.ReadAllText(FilePath), JsonDefaults.Options) ?? throw new InvalidDataException(Loc.T("err.configEmpty"));
         result.Validate(Access.Sid);
         return result;
     }
@@ -61,7 +62,7 @@ public static class Store
         Ensure(); config.Validate(Access.Sid);
         using var writeLock = new FileStream(Path.Combine(Root, Access.Sid + ".lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         if (Load().Revision != config.Revision)
-            throw new InvalidOperationException("配置已被其他窗口修改，请重新打开配置界面后再保存。");
+            throw new InvalidOperationException(Loc.T("err.revisionConflict"));
         var bytes = (config with { Revision = checked(config.Revision + 1) }).SerializeForStorage(Access.Sid);
         var temp = Path.Combine(Root, Guid.NewGuid() + ".tmp");
         try

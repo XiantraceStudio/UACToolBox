@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using UACToolBox.Contracts;
 using UACToolBox.WindowsIntegration;
+using UACToolBox.Localization;
 using PipeSecurity = UACToolBox.WindowsIntegration.PipeSecurity;
 namespace UACToolBox.Launcher;
 internal static class Program
@@ -19,14 +20,14 @@ internal static class Program
             Guid id;
             if (args is ["launch", var text] && Guid.TryParse(text, out id)) { }
             else if (args is ["resolve", var path]) id = Resolve(path);
-            else throw new ArgumentException("用法：Launcher.exe launch <ID> 或 resolve <文件> [--silent]");
+            else throw new ArgumentException(Loc.T("err.usage"));
             var response = Client(id).GetAwaiter().GetResult();
-            if (response.Code != ResultCode.Success && !silent) MessageBox(IntPtr.Zero, response.Message, "启动失败", 0x10);
+            if (response.Code != ResultCode.Success && !silent) MessageBox(IntPtr.Zero, response.Message, Loc.T("msg.launchFailed"), 0x10);
             return (int)response.Code;
         }
         catch (Exception ex)
         {
-            if (!silent && args is not ["broker"]) MessageBox(IntPtr.Zero, ex.Message, "启动失败", 0x10);
+            if (!silent && args is not ["broker"]) MessageBox(IntPtr.Zero, ex.Message, Loc.T("msg.launchFailed"), 0x10);
             return (int)ResultCode.StartFailed;
         }
     }
@@ -43,7 +44,7 @@ internal static class Program
             entries = entries.Where(e => e.ArgumentsRaw == imported.ArgumentsRaw &&
                 string.Equals(e.WorkingDirectory, imported.WorkingDirectory, StringComparison.OrdinalIgnoreCase) && e.ShowMode == imported.ShowMode);
         var matches = entries.ToArray();
-        if (matches.Length != 1) throw new InvalidOperationException(matches.Length == 0 ? "尚未配置此程序，请通过右键添加到启动配置。" : "匹配多个配置，请使用已生成的启动快捷方式。");
+        if (matches.Length != 1) throw new InvalidOperationException(Loc.T(matches.Length == 0 ? "err.notConfigured" : "err.multiMatch"));
         return matches[0].Id;
     }
     static async Task<LaunchResponse> Client(Guid id)
@@ -53,7 +54,7 @@ internal static class Program
         try { await pipe.ConnectAsync(150, deadline.Token); }
         catch (TimeoutException)
         {
-            if (!Scheduler.Installed()) throw new InvalidOperationException("尚未安装启动任务，请先打开配置程序安装。");
+            if (!Scheduler.Installed()) throw new InvalidOperationException(Loc.T("err.taskMissing"));
             Scheduler.Run(); await pipe.ConnectAsync(deadline.Token);
         }
         PipeSecurity.VerifyServer(pipe);
@@ -66,7 +67,7 @@ internal static class Program
             return response;
         }
         catch (Exception ex) when (ex is IOException or OperationCanceledException)
-        { return new(request.RequestId, ResultCode.Unknown, "连接中断或超时，启动结果未知。请检查目标程序后再操作。"); }
+        { return new(request.RequestId, ResultCode.Unknown, Loc.T("err.unknownResult")); }
     }
     static async Task Broker()
     {
